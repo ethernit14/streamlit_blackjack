@@ -1,6 +1,14 @@
 import streamlit as st
 import random
 
+# Card deck with proper distribution (10, J, Q, K all worth 10)
+# This gives 10-value cards 4x more probability like real blackjack
+CARD_DECK = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10]  # Last 4 are J, Q, K
+
+def draw_card():
+    """Draw a random card from the deck"""
+    return random.choice(CARD_DECK)
+
 # Initialize session state
 if 'players' not in st.session_state:
     st.session_state.players = []
@@ -124,8 +132,8 @@ def play_game():
         
         if st.button("Place Bet", type="primary"):
             game['bet'] = bet
-            game['dealer_cards'] = random.choices(range(1, 11), k=2)
-            game['player_cards'] = random.choices(range(1, 11), k=2)
+            game['dealer_cards'] = [draw_card(), draw_card()]
+            game['player_cards'] = [draw_card(), draw_card()]
             game['ace_count'] = game['player_cards'].count(1)
             game['player_score'] = sum(game['player_cards'])
             game['stage'] = 'playing'
@@ -171,7 +179,7 @@ def play_game():
             
             with col1:
                 if st.button("👊 Hit", use_container_width=True):
-                    new_card = random.choice(range(1, 11))
+                    new_card = draw_card()
                     game['player_cards'].append(new_card)
                     game['player_score'] += new_card
                     if new_card == 1:
@@ -199,50 +207,32 @@ def play_game():
                     game['dealer_score'] = sum(game['dealer_cards'])
                     
                     while game['dealer_score'] < 17:
-                        new_card = random.choice(range(1, 11))
+                        new_card = draw_card()
                         game['dealer_cards'].append(new_card)
                         game['dealer_score'] += new_card
                     
                     game['stage'] = 'dealer_turn'
                     st.rerun()
     
-    # Dealer's turn
+    # Dealer's turn - compute result only
     elif game['stage'] == 'dealer_turn':
-        st.markdown(f"**Your Bet:** ${game['bet']}")
-        
-        # Display all cards
-        st.markdown("### Dealer's Cards:")
-        dealer_cards_display = " | ".join([str(card) for card in game['dealer_cards']])
-        st.markdown(f'<div class="card-display" style="color: black; font-weight: bold;">{dealer_cards_display}</div>', unsafe_allow_html=True)
-        st.markdown(f"**Dealer's Score:** {game['dealer_score']}")
-        
-        st.markdown("### Your Cards:")
-        player_cards_display = " | ".join([str(card) for card in game['player_cards']])
-        st.markdown(f'<div class="card-display" style="color: black; font-weight: bold;">{player_cards_display}</div>', unsafe_allow_html=True)
-        st.markdown(f"**Your Score:** {game['player_score']}")
-        
-        st.markdown("---")
-        
-        # Determine winner
+        # Determine winner and update balance
         if game['dealer_score'] > 21:
-            st.success("🎉 Dealer busted! You win!")
+            game['result'] = 'dealer_bust'
             winnings = game['bet'] * 2
             st.session_state.moneylist[player_idx] += winnings
-            st.info(f"💰 You won ${winnings}! New balance: ${st.session_state.moneylist[player_idx]}")
         elif game['dealer_score'] > game['player_score']:
-            st.error("😞 Dealer wins! You lose.")
-            st.info(f"💰 New balance: ${st.session_state.moneylist[player_idx]}")
+            game['result'] = 'dealer_wins'
         elif game['dealer_score'] < game['player_score']:
-            st.success("🎉 You win!")
+            game['result'] = 'player_wins'
             winnings = game['bet'] * 2
             st.session_state.moneylist[player_idx] += winnings
-            st.info(f"💰 You won ${winnings}! New balance: ${st.session_state.moneylist[player_idx]}")
         else:
-            st.warning("🤝 It's a tie! You get your bet back.")
+            game['result'] = 'tie'
             st.session_state.moneylist[player_idx] += game['bet']
-            st.info(f"💰 New balance: ${st.session_state.moneylist[player_idx]}")
         
         game['stage'] = 'finished'
+        st.rerun()
     
     # Game finished - show final state
     if game['stage'] == 'finished':
@@ -252,7 +242,7 @@ def play_game():
         st.markdown("### Dealer's Cards:")
         dealer_cards_display = " | ".join([str(card) for card in game['dealer_cards']])
         st.markdown(f'<div class="card-display" style="color: black; font-weight: bold;">{dealer_cards_display}</div>', unsafe_allow_html=True)
-        if game['result'] != 'bust' and game['result'] != 'blackjack':
+        if game['result'] not in ['bust', 'blackjack']:
             st.markdown(f"**Dealer's Score:** {game.get('dealer_score', sum(game['dealer_cards']))}")
         
         st.markdown("### Your Cards:")
@@ -262,13 +252,21 @@ def play_game():
         
         st.markdown("---")
         
-        # Show result message
+        # Show result message based on result type
         if game['result'] == 'bust':
             st.error("💥 Busted! You went over 21!")
-            st.info(f"💰 New balance: ${st.session_state.moneylist[player_idx]}")
         elif game['result'] == 'blackjack':
             st.success("🎉 Blackjack! You win!")
-            st.info(f"💰 New balance: ${st.session_state.moneylist[player_idx]}")
+        elif game['result'] == 'dealer_bust':
+            st.success("🎉 Dealer busted! You win!")
+        elif game['result'] == 'dealer_wins':
+            st.error("😞 Dealer wins! You lose.")
+        elif game['result'] == 'player_wins':
+            st.success("🎉 You win!")
+        elif game['result'] == 'tie':
+            st.warning("🤝 It's a tie! You get your bet back.")
+        
+        st.info(f"💰 New balance: ${st.session_state.moneylist[player_idx]}")
         
         st.markdown("---")
         
