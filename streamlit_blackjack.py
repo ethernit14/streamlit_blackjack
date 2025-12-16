@@ -140,12 +140,12 @@ def play_game():
         
         # Display dealer's cards (one hidden)
         st.markdown("### Dealer's Cards:")
-        st.markdown(f'<div class="card-display">🂠 (Hidden) | {game["dealer_cards"][1]}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="card-display" style="color: black; font-weight: bold;">🂠 (Hidden) | {game["dealer_cards"][1]}</div>', unsafe_allow_html=True)
         
         # Display player's cards
         st.markdown("### Your Cards:")
         cards_display = " | ".join([str(card) for card in game['player_cards']])
-        st.markdown(f'<div class="card-display">{cards_display}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="card-display" style="color: black; font-weight: bold;">{cards_display}</div>', unsafe_allow_html=True)
         
         # Calculate and display score
         player_score = game['player_score']
@@ -184,8 +184,6 @@ def play_game():
                     
                     # Check for bust
                     if game['player_score'] > 21:
-                        st.error("💥 Busted! You lose!")
-                        st.info(f"💰 New balance: ${st.session_state.moneylist[player_idx]}")
                         game['stage'] = 'finished'
                         game['result'] = 'bust'
                     
@@ -215,12 +213,12 @@ def play_game():
         # Display all cards
         st.markdown("### Dealer's Cards:")
         dealer_cards_display = " | ".join([str(card) for card in game['dealer_cards']])
-        st.markdown(f'<div class="card-display">{dealer_cards_display}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="card-display" style="color: black; font-weight: bold;">{dealer_cards_display}</div>', unsafe_allow_html=True)
         st.markdown(f"**Dealer's Score:** {game['dealer_score']}")
         
         st.markdown("### Your Cards:")
         player_cards_display = " | ".join([str(card) for card in game['player_cards']])
-        st.markdown(f'<div class="card-display">{player_cards_display}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="card-display" style="color: black; font-weight: bold;">{player_cards_display}</div>', unsafe_allow_html=True)
         st.markdown(f"**Your Score:** {game['player_score']}")
         
         st.markdown("---")
@@ -246,8 +244,35 @@ def play_game():
         
         game['stage'] = 'finished'
     
-    # Game finished
+    # Game finished - show final state
     if game['stage'] == 'finished':
+        st.markdown(f"**Your Bet:** ${game['bet']}")
+        
+        # Show final cards
+        st.markdown("### Dealer's Cards:")
+        dealer_cards_display = " | ".join([str(card) for card in game['dealer_cards']])
+        st.markdown(f'<div class="card-display" style="color: black; font-weight: bold;">{dealer_cards_display}</div>', unsafe_allow_html=True)
+        if game['result'] != 'bust' and game['result'] != 'blackjack':
+            st.markdown(f"**Dealer's Score:** {game.get('dealer_score', sum(game['dealer_cards']))}")
+        
+        st.markdown("### Your Cards:")
+        player_cards_display = " | ".join([str(card) for card in game['player_cards']])
+        st.markdown(f'<div class="card-display" style="color: black; font-weight: bold;">{player_cards_display}</div>', unsafe_allow_html=True)
+        st.markdown(f"**Your Score:** {game['player_score']}")
+        
+        st.markdown("---")
+        
+        # Show result message
+        if game['result'] == 'bust':
+            st.error("💥 Busted! You went over 21!")
+            st.info(f"💰 New balance: ${st.session_state.moneylist[player_idx]}")
+        elif game['result'] == 'blackjack':
+            st.success("🎉 Blackjack! You win!")
+            st.info(f"💰 New balance: ${st.session_state.moneylist[player_idx]}")
+        
+        st.markdown("---")
+        
+        # Replay buttons
         col1, col2 = st.columns(2)
         with col1:
             if st.button("🔄 Play Again", use_container_width=True):
